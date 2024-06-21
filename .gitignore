@@ -13,3 +13,5 @@ man/*
 src/_build/
 src/prim.ml
 src/config.ml
+_build
+_opam
