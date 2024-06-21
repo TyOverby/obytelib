@@ -526,6 +526,7 @@ let make_cfun_map code prim =
   cfuns
 
 let eval_bytefile { data; prim; code; _ } =
+  (* TODO(ty): don't round-trip the globals; leave them as Obj.t *)
   let globals = Data.to_objs data in
   let cfuns = make_cfun_map code prim in
   Data.fix_std_exceptions globals;
