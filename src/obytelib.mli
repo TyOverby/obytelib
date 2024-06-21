@@ -283,6 +283,7 @@ module Value : sig
     | String      of string
     | Object      of t array
     | Block       of int * t array
+    | Unknown     of Obj.t * exn
 
   (** Convert a value to a pretty-string *)
   val to_string : t -> string

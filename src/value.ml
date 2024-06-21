@@ -21,6 +21,7 @@ type t =
   | String      of string
   | Object      of t array
   | Block       of int * t array
+  | Unknown     of Obj.t * exn
 
 (***)
 
@@ -36,6 +37,7 @@ let rec bprint buf value =
   | String s       -> bprintf buf "%S" s
   | Object o       -> bprint_array "<" ";" ">" bprint buf o
   | Block (tag, b) -> bprint_array (sprintf "[%d|" tag) ";" "]" bprint buf b
+  | Unknown (_, exn)-> bprintf buf "<unknown %s>" (Printexc.to_string exn)
 
 let to_string value =
   let buf = Buffer.create 16 in
@@ -58,11 +60,13 @@ let rec of_obj obj =
   else if tag = Obj.double_tag then Float (Obj.obj obj : float)
   else if tag = Obj.double_array_tag then Float_array (Obj.obj obj : float array)
   else if tag = Obj.custom_tag then
-    let key = Obj.field obj 0 in
-    if key = Obj.field (Obj.repr 0l) 0 then Int32 (Obj.obj obj : int32)
-    else if key = Obj.field (Obj.repr 0L) 0 then Int64 (Obj.obj obj : int64)
-    else if key = Obj.field (Obj.repr 0n) 0 then Nativeint (Obj.obj obj : nativeint)
-    else fail "unknown custom block"
+    try begin
+    let key = Obj.raw_field obj 0 in
+    if Obj.raw_field (Obj.repr 0l) 0 = key then Int32 (Obj.obj obj : int32)
+    else if Obj.raw_field (Obj.repr 0L) 0 = key then Int64 (Obj.obj obj : int64)
+    else if Obj.raw_field (Obj.repr 0n) 0 = key then Nativeint (Obj.obj obj : nativeint)
+    else fail "unknown custom block" end with 
+    | exn -> Unknown (obj, exn)
   else if tag = Obj.int_tag then Int (Obj.obj obj : int)
   else if tag = Obj.out_of_heap_tag then fail "unexpected block out of heap"
   else if tag >= Obj.no_scan_tag then fail "unexpected block"
@@ -91,6 +95,7 @@ let make_to_obj () =
     | Int64 n        -> unify int64_htbl n
     | Nativeint n    -> unify nativeint_htbl n
     | Float f        -> unify float_htbl f
+    | Unknown (t, _exn)      -> t
     | Float_array t  -> Obj.repr t
     | String s       -> Obj.repr s
     | Object o       ->

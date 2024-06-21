@@ -83,6 +83,7 @@ let read file_name =
     close_in ic;
     fail "file %S is not a valid bytecode file (%s)" file_name msg
   | exn ->
+    if true then raise exn;
     close_in ic;
     fail "fail to read bytecode file %S (internal error: %s)"
       file_name (Printexc.to_string exn)
